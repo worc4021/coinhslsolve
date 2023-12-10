@@ -23,11 +23,7 @@ private:
     std::vector<std::size_t> rowIndex;
     std::vector<std::size_t> jCol;
     std::size_t _mRows, _nCols;
-    std::size_t nnz() const {
-        if (rowIndex.size() == 0) 
-            return 0;
-        return rowIndex[_mRows];
-    }
+    
 public:
     CSRMatrix() = delete;
     CSRMatrix(std::size_t mRows, std::size_t nCols) : _mRows(mRows), _nCols(nCols), rowIndex(mRows+1,0) {}
@@ -38,7 +34,7 @@ public:
         assert (i < _mRows && j < _nCols);
         if (nnz()){
             std::size_t k = rowIndex[i];
-            while (jCol[k] < j && k < rowIndex[i+1]) {
+            while (k < jCol.size() && jCol.at(k) < j && k < rowIndex[i+1]) {
                 k++;
             }
             if (k >= nnz()) {
@@ -49,7 +45,7 @@ public:
                 }
                 return values.back();
             }
-            else if (jCol[k] != j) {
+            else if (jCol.at(k) != j) {
                 values.insert(values.begin() + k,static_cast<T>(0));
                 jCol.insert(jCol.begin() + k, j);
                 for (std::size_t k = i+1; k <= _mRows; k++) {
@@ -100,4 +96,21 @@ public:
         result.nCols = _nCols;
         return result;
     }
+    std::size_t nnz() const {
+        if (rowIndex.size() == 0) 
+            return 0;
+        return rowIndex[_mRows];
+    }
+
+    void fromCoordinateFormat(const CoordinateFormat<T>& other) {
+        _mRows = other.mRows;
+        _nCols = other.nCols;
+        values = other.values;
+        jCol = other.jCol;
+        for (std::size_t i = 0; i < other.iRow.size(); i++) {
+            operator()(other.iRow[i], other.jCol[i]) = other.values[i];
+        }
+    }
+
+    
 };

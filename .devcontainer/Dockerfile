@@ -23,7 +23,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
             zip \
             unzip \
             tar \
-            autoconf
+            autoconf \
+            valgrind
             
 ARG USERNAME
 

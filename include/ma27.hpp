@@ -35,36 +35,63 @@ extern "C" {
 
 }
 
-#include <memory>
+#include <vector>
+#include <array>
 
 template<class T> inline T max(T a, T b) {
     return a > b ? a : b;
 }
 
-inline void convert(const int *x, Integer *y, int length) {
+inline void convert(const int *x, std::vector<Integer>& y, int length) {
     for (auto i = 0; i < length; i++)
         y[i] = x[i];
 }
 
 class ma27 {
     public:
-        Integer ICNTL[30], INFO[20];
+        std::array<Integer, 30> ICNTL;
+        std::array<Integer, 20> INFO;
     private:
-        Real CNTL[5];
+        std::array<Real, 5> CNTL;
         Integer NZ, N, LIW, NSTEPS, IFLAG, MAXFRT, LA;
         Real OPS;
-        std::unique_ptr<Integer[]> IRN, ICN, IW, IW1, IKEEP;
-        std::unique_ptr<Real[]> A, W, Avals;
+        std::vector<Integer> IRN, ICN, IW, IW1, IKEEP;
+        std::vector<Real> A, W, Avals;
 
-        void symbolicManipulation(void) {
+    public:
+        ma27(int n, int nz, const int *irn, const int *jcn, const Real *a) : 
+            NZ(nz), N(n), IRN(nz),
+            ICN(nz), Avals(a, a+nz), A(0),
+            IW(max(2*nz+3*n+1,nz+3*n+1)*2), 
+            LIW(max(2*nz+3*n+1,nz+3*n+1)*2), IKEEP(3*n),
+            IW1(2*n), W(0)
+        {
+            convert(irn, IRN, nz);
+            convert(jcn, ICN, nz);
+            
+            Integer* icntl_ = ICNTL.data();
+            Real* cntl_     = CNTL.data();
+
+            FC_ma27id(icntl_, cntl_);
+            
+            ICNTL[1-1] = 0;
+            ICNTL[2-1] = 0;
+            // ICNTL[3-1] = 2;
+        }
+
+        Integer symbolicManipulation(void) {
             Integer IFLAG(0);
-            Integer* irn_   = IRN.get();
-            Integer* icn_   = ICN.get();
-            Integer* iw_    = IW.get();
-            Integer* iw1_   = IW1.get();
-            Integer* ikeep_ = IKEEP.get();
+            Integer* irn_   = IRN.data();
+            Integer* icn_   = ICN.data();
+            Integer* iw_    = IW.data();
+            Integer* iw1_   = IW1.data();
+            Integer* ikeep_ = IKEEP.data();
+            Integer* icntl_ = ICNTL.data();
+            Real* cntl_     = CNTL.data();
+            Integer* info_  = INFO.data();
 
-            FC_ma27ad(N, NZ, irn_, icn_, iw_, LIW, ikeep_, iw1_, NSTEPS, IFLAG, ICNTL, CNTL, INFO, OPS);
+
+            FC_ma27ad(N, NZ, irn_, icn_, iw_, LIW, ikeep_, iw1_, NSTEPS, IFLAG, icntl_, cntl_, info_, OPS);
             
             Integer nrlnec(INFO[5-1]);
             Integer nirnec(INFO[6-1]);
@@ -72,71 +99,46 @@ class ma27 {
             LIW = 5*nirnec;
             LA = max(NZ, 5*nrlnec);
 
-            IW.reset(new Integer[LIW]);
-            A.reset(new Real[LA]);
-            IW1.reset(new Integer[NSTEPS]);
+            IW.resize(LIW);
+            A.resize(LA);
+            IW1.resize(NSTEPS);
 
+            std::copy(Avals.begin(), Avals.end(), A.begin());
+
+            return INFO[0];
         }
 
-        void factoriseMatrix(void){
+        Integer factoriseMatrix(void){
 
-            Integer* irn_   = IRN.get();
-            Integer* icn_   = ICN.get();
-            Integer* iw_    = IW.get();
-            Integer* ikeep_ = IKEEP.get();
-            Integer* iw1_   = IW1.get();
-            Real* a_        = A.get();
+            Integer* irn_   = IRN.data();
+            Integer* icn_   = ICN.data();
+            Integer* iw_    = IW.data();
+            Integer* ikeep_ = IKEEP.data();
+            Integer* iw1_   = IW1.data();
+            Real* a_        = A.data();
+            Integer* icntl_ = ICNTL.data();
+            Real* cntl_     = CNTL.data();
+            Integer* info_  = INFO.data();
 
-            for (auto i = 0; i < NZ; i++)
-                A[i] = Avals[i];
+            FC_ma27bd(N, NZ, irn_, icn_, a_, LA, iw_, LIW, ikeep_ , NSTEPS, MAXFRT, iw1_, icntl_, cntl_, info_);
 
-            FC_ma27bd(N, NZ, irn_, icn_, a_, LA, iw_, LIW, ikeep_ , NSTEPS, MAXFRT, iw1_, ICNTL, CNTL, INFO);
+            W.resize(MAXFRT);
 
-            W.reset(new Real[MAXFRT]);
-
-        }
-    public:
-        ma27(int n, int nz, const int *irn, const int *jcn, const Real *a) : 
-            NZ(nz), N(n), IRN(new Integer[nz]),
-            ICN(new Integer[nz]), Avals(new Real[nz]), A(nullptr),
-            IW(new Integer[max(2*nz+3*n+1,nz+3*n+1)*2]), 
-            LIW(max(2*nz+3*n+1,nz+3*n+1)*2), IKEEP(new Integer[3*n]),
-            IW1(new Integer[2*n]), W(nullptr)
-        {
-            convert(irn, IRN.get(), nz);
-            convert(jcn, ICN.get(), nz);
-            std::copy(a, a+nz, Avals.get());
-            
-            FC_ma27id(ICNTL, CNTL);
-            
-            ICNTL[1-1] = 0;
-            ICNTL[2-1] = 0;
-            // ICNTL[3-1] = 2;
-
-            symbolicManipulation();
-            factoriseMatrix();
+            return INFO[0];
         }
 
-        
+        Integer backsolve(Real* rhs) {
 
-        void backsolve(Real* rhs) {
+            Real* a_      = A.data();
+            Integer* iw_  = IW.data();
+            Real* w_      = W.data();
+            Integer* iw1_ = IW1.data();
+            Integer* icntl_ = ICNTL.data();
+            Integer* info_  = INFO.data();
 
-            Real* a_      = A.get();
-            Integer* iw_  = IW.get();
-            Real* w_      = W.get();
-            Integer* iw1_ = IW1.get();
-            
-             FC_ma27cd(N, a_, LA, iw_, LIW, w_, MAXFRT, rhs, iw1_, NSTEPS, ICNTL, INFO);
-        }
+            FC_ma27cd(N, a_, LA, iw_, LIW, w_, MAXFRT, rhs, iw1_, NSTEPS, icntl_, info_);
 
-        void getICNTL(Integer* icntl) const {
-            for(auto i = 0; i < 30; i++)
-                icntl[i] = ICNTL[i];
-        }
-
-        void getInfo(Integer* info) const {
-            for (auto i = 0; i < 20; i++)
-                info[i] = INFO[i];
+            return INFO[0];
         }
 
         Integer getLA(void) const {
