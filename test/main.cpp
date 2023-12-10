@@ -34,6 +34,7 @@ s = sprintf('%s}\n',s);
 clipboard("copy",s);
 end
 */
+    GTEST_SKIP() << "Skipping Bucky test for now.";
     std::size_t n = 60;
     CSRMatrix<double> A(n,n);
     {

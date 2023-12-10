@@ -3,10 +3,13 @@ cmake_minimum_required(VERSION 3.21)
 project(coinhsl-linsolve LANGUAGES C CXX Fortran)
 
 option(BUILD_TESTS "Build tests" ON)
+set( "/build" CACHE STRING "Path to local install for libraries with pkgconfig directory")
+
 
 # Set up pkg-config for custom installed packages
-set(ENV{PKG_CONFIG_PATH} "/build/lib/pkgconfig")
-link_directories(/build/lib)
+set(ENV{PKG_CONFIG_PATH} "${LOCAL_INSTALL_PREFIX}/lib/pkgconfig")
+link_directories(${LOCAL_INSTALL_PREFIX}/lib)
+# -----------------------------
 
 find_package(PkgConfig REQUIRED)
 pkg_search_module(COINHSL REQUIRED IMPORTED_TARGET coinhsl)
