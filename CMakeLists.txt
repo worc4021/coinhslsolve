@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.21)
 project(coinhsl-linsolve LANGUAGES C CXX Fortran)
 
 option(BUILD_TESTS "Build tests" ON)
-set( "/build" CACHE STRING "Path to local install for libraries with pkgconfig directory")
+set(LOCAL_INSTALL_PREFIX "/build" CACHE STRING "Path to local install for libraries with pkgconfig directory")
 
 
 # Set up pkg-config for custom installed packages
